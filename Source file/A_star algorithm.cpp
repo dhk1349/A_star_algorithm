@@ -9,6 +9,7 @@ int main()
 
 	print2DV(map);
 
+	block_controller My_controller(map);
 
 	return 1;
 }
