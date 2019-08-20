@@ -12,10 +12,12 @@ public:
 	vector<int> Get_addr()const;
 	block* Get_prev_block()const;
 	double Get_H_len()const;
+	double Get_len_so_far()const;
 	/////////Operator Overloading/////////
 	bool operator>(const block& post_block);
 	bool operator<(const block& post_block);
 	bool operator==(const block& post_block);
+	void print_block();
 private:
 	vector<int> addr; //block's  address in 2D vector
 	block* prev; //block object right before this block
@@ -32,12 +34,16 @@ public:
 	void closed_to_open();
 	void open_to_closed();
 	void trace_back();//After reaching destination, trace back to starting point to find out route.
+	vector<vector<block*>>get_block_container() const;
 	//need to care about obstacles
-	//
+	void get_h_info(int a, int b);
+	vector<vector<int>> get_movable_space(block* input);
+	void print_map();
+
 private:
 	vector<vector<char>> map;
 	vector<vector<int>> Beg_End_location; //stores starting location and ending location
-	vector<vector<block>> block_container;
-	priority_queue <block> Open_block;
-	priority_queue <block> Closed_block; //initial Closed_block should have starting point.
+	vector<vector<block*>> block_container;
+	priority_queue <block*> Open_block;
+	priority_queue <block*> Closed_block; //initial Closed_block should have starting point.
 };
