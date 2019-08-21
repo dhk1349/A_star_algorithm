@@ -16,14 +16,18 @@ block::block(vector<vector<int>>input) {//block's location and destination locat
 	prev = nullptr;
 }
 
-void block::Set_len_so_far(double input) {
+int block::Set_len_so_far(double input) {
 	if (length_so_far == -1) {
 		length_so_far = input;
+		return 1;
 	}
 	else {
-	if(length_so_far>input) //if newly added path's LSF is shorter, change existing value to new value.
-		length_so_far = input;
+		if (length_so_far > input) {//if newly added path's LSF is shorter, change existing value to new value.
+			length_so_far = input;
+			return 1;
+		}
 	}
+	return 0;
 }
 
 void block::Set_prev_block(block* prev_block) {
@@ -46,19 +50,22 @@ double block::Get_len_so_far() const{
 	return length_so_far;
 }
 
+double block::Get_TTL() const {
+	return length_so_far + H_length;
+}
 
-bool block::operator>(const block& post_block) { 
-	if(this->Get_H_len() > post_block.Get_H_len())
-		return true; 
+bool block::operator>(const block& post_block) {
+	if (this->Get_H_len() + this->Get_len_so_far() > post_block.Get_H_len() + post_block.Get_len_so_far())
+		return true;
 	return false;
-} 
+}
 bool block::operator<(const block& post_block) {
-	if (this->Get_H_len() < post_block.Get_H_len())
+	if (this->Get_H_len() + this->Get_len_so_far() < post_block.Get_H_len() + post_block.Get_len_so_far())
 		return true;
 	return false; 
 }
 bool block::operator==(const block& post_block) {
-	if (this->Get_H_len() == post_block.Get_H_len())
+	if (this->Get_H_len() + this->Get_len_so_far() == post_block.Get_H_len() + post_block.Get_len_so_far())
 		return true;
 	return false;
 }
@@ -67,6 +74,7 @@ void block::print_block() {
 	cout <<"Address: "<< addr[0] << ", " << addr[1] << endl;
 	cout <<"Heuristic length: "<< H_length << endl;
 	cout << "Length so far: " << length_so_far << endl;
+	cout << "Total length: " << H_length + length_so_far << endl << endl;
 }
 
 /////////////////////////////////Block Controller class implemetation/////////////////////////////////
@@ -141,27 +149,44 @@ void block_controller::run() {
 	cout << "adding " << Beg_End_location[0][0] << ", " << Beg_End_location[0][1] << endl;
 	block_container[Beg_End_location[0][0]][Beg_End_location[0][1]]->Set_len_so_far(0) ;
 	Closed_block.push(block_container[Beg_End_location[0][0]][Beg_End_location[0][1]]);//adding starting point block to closed block
+	int test;
+	for (int i = 0;i<93;i++) {
+		closed_to_open();
+		test = i % 9;
+		open_to_closed(test);
+		if (i % 10 == 0) { print_map(); }
+	}
 	closed_to_open();
+	open_to_closed(15);
 }
 
 void block_controller::closed_to_open() {
-	block* temp=Closed_block.top();
-	cout << "1st block " << temp->Get_addr()[0] << ", " << temp->Get_addr()[1] << endl;
+	block* temp=Closed_block.top(); //이게 맞나?
+	//cout << "1st block " << temp->Get_addr()[0] << ", " << temp->Get_addr()[1] << endl;
 	vector<vector<int>> temp2=get_movable_space(temp);
+	int length_revision;
 	for (int i = 0;i<3;i++) {
 		for (int j = 0;j<3;j++) {
-			if (temp2[i][j] == 1) {
-				block_container[temp->Get_addr()[0] + i - 1][temp->Get_addr()[1] + j - 1]->Set_prev_block(temp); //set prev block
-				block_container[temp->Get_addr()[0] + i - 1][temp->Get_addr()[1] + j - 1]->Set_len_so_far(temp->Get_len_so_far()+sqrt(pow(temp->Get_addr()[0]-(temp->Get_addr()[0] + i - 1),2)+pow(temp->Get_addr()[1]-(temp->Get_addr()[1] + j - 1),2))); //set LSF based on prev block
-				Open_block.push(block_container[temp->Get_addr()[0] + i - 1][temp->Get_addr()[1] + j - 1]);
-				map[temp->Get_addr()[0] + i - 1][temp->Get_addr()[1] + j - 1] = 'X';  //mark for open block
+			if (temp2[i][j] == 1) {//최단거리 갱신되면 이전 주소가 수정되도록 코그 수정
+				length_revision=block_container[temp->Get_addr()[0] + i - 1][temp->Get_addr()[1] + j - 1]->Set_len_so_far(temp->Get_len_so_far()+sqrt(pow(temp->Get_addr()[0]-(temp->Get_addr()[0] + i - 1),2)+pow(temp->Get_addr()[1]-(temp->Get_addr()[1] + j - 1),2))); //set LSF based on prev block
+				if (length_revision==1)block_container[temp->Get_addr()[0] + i - 1][temp->Get_addr()[1] + j - 1]->Set_prev_block(temp); //set prev block
+				if(map[temp->Get_addr()[0] + i - 1][temp->Get_addr()[1] + j - 1]=='.'){
+					cout << temp->Get_addr()[0] + i - 1 << ", " << temp->Get_addr()[1] + j - 1 << " pushed to open block -> "<< block_container[temp->Get_addr()[0] + i - 1][temp->Get_addr()[1] + j - 1]->Get_TTL()<<endl;
+					Open_block.push(block_container[temp->Get_addr()[0] + i - 1][temp->Get_addr()[1] + j - 1]);
+					map[temp->Get_addr()[0] + i - 1][temp->Get_addr()[1] + j - 1] = 'X';  //mark for open block
+				}
 			}
 		}
 	}
 }
 
-void block_controller::open_to_closed() {
-
+void block_controller::open_to_closed(int i) {
+	block* temp=Open_block.top(); //pick
+	cout << "shortest open block is " << temp->Get_addr()[0] <<", "<< temp->Get_addr()[1] << " -> "<<temp->Get_TTL()<<endl;
+	map[temp->Get_addr()[0]][temp->Get_addr()[1]] = '1' + i;
+	Closed_block.push(Open_block.top());
+	Open_block.pop();
+	cout << "Shortest open block popped. " << Open_block.size() << " left in open block stack\n";
 }
 
 void block_controller::trace_back() {}//After reaching destination, trace back to starting point to find out route.
@@ -185,9 +210,19 @@ vector<vector<int>> block_controller::get_movable_space(block* input) {//x, y is
 		}
 	}
 	movable_space[1][1] = 0;
-	/*
-	 * Need Addtional Code for diagonal wall.
-	 */
+	//considering walls
+	if (movable_space[0][1] == 0 && movable_space[1][0] == 0) {
+		movable_space[0][0] = 0;
+	}
+	if (movable_space[2][1] == 0 && movable_space[1][0] == 0) {
+		movable_space[2][0] = 0;
+	}
+	if (movable_space[2][1] == 0 && movable_space[1][2] == 0) {
+		movable_space[2][2] = 0;
+	}
+	if (movable_space[0][1] == 0 && movable_space[1][2] == 0) {
+		movable_space[0][2] = 0;
+	}
 	return movable_space;
 }
 
