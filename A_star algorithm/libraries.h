@@ -6,5 +6,10 @@
 #include <cmath>
 #include <queue>
 #include <stack>
+
+
+/* 
+* Collection of libraries
+*/
 using namespace std;
 
